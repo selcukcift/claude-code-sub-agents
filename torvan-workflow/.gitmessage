@@ -1,0 +1,46 @@
+# TORVAN Medical Workflow Management System
+# Commit Message Template for Medical Software Compliance
+
+# Format: <type>[optional scope]: <description>
+#
+# Example: feat(inventory): add barcode scanning for medical devices
+
+# Types:
+# feat:       New feature
+# fix:        Bug fix  
+# docs:       Documentation changes
+# style:      Code style changes (formatting, etc.)
+# refactor:   Code refactoring without feature changes
+# perf:       Performance improvements
+# test:       Adding or updating tests
+# chore:      Maintenance tasks, build process, etc.
+# security:   Security-related changes
+# medical:    Medical device specific functionality
+# regulatory: Regulatory compliance changes
+# compliance: General compliance modifications
+# audit:      Audit trail or logging changes
+
+# Subject line rules:
+# - Use imperative mood ("add" not "added")
+# - Keep under 50 characters
+# - Don't end with a period
+# - Capitalize first letter after colon (lowercase)
+
+# Body (optional):
+# - Explain WHAT and WHY, not HOW
+# - Wrap at 72 characters
+# - Reference issues: "Closes #123" or "Fixes #456"
+# - Include medical/regulatory context when applicable
+
+# Footer (optional):
+# - Breaking changes: "BREAKING CHANGE: description"
+# - Co-authored by: "Co-authored-by: Name <email>"
+# - Regulatory references: "FDA-Reference: 21CFR820.70"
+# - Risk level: "Risk-Level: Low|Medium|High"
+
+# Medical Software Guidelines:
+# - All commits are part of audit trail
+# - Include sufficient context for regulatory review  
+# - Reference quality management system when applicable
+# - Consider patient safety impact in commit messages
+# - Document any medical device classification changes

@@ -1,0 +1,219 @@
+name: ✨ Feature Request
+description: Request a new feature for TORVAN Medical Workflow Management System
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-analysis"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🏥 Medical Software Feature Request
+        
+        Thank you for suggesting a new feature for TORVAN. All feature requests are evaluated through our medical device development process and regulatory requirements.
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: Feature Category
+      description: Select the primary category for this feature
+      options:
+        - Inventory Management
+        - Order Processing
+        - Bill of Materials (BOM)
+        - User Management & Security
+        - Quality Control
+        - Production Management
+        - Integration & APIs
+        - Reporting & Analytics
+        - Mobile/Tablet Support
+        - Medical Device Compliance
+        - Regulatory Documentation
+        - Audit & Logging
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Business Priority
+      description: How important is this feature to medical operations?
+      options:
+        - Critical - Required for regulatory compliance or patient safety
+        - High - Significantly improves workflow efficiency
+        - Medium - Nice to have, moderate workflow improvement
+        - Low - Minor improvement or convenience feature
+    validations:
+      required: true
+
+  - type: dropdown
+    id: medical-risk
+    attributes:
+      label: Medical Device Risk Assessment
+      description: Potential risk level of implementing this feature
+      options:
+        - High - Direct patient safety impact or critical device function
+        - Medium - Indirect patient impact or significant workflow change
+        - Low - No patient impact, operational enhancement only
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Describe the feature as a user story
+      placeholder: |
+        As a [type of user], I want [feature] so that [benefit/goal].
+        
+        Example: As a surgical technician, I want to scan barcodes on medical devices so that I can quickly verify inventory and reduce manual entry errors.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: |
+        Describe the current challenge or limitation that this feature would address:
+        - What manual processes could be automated?
+        - What inefficiencies exist in current workflows?
+        - What regulatory requirements need to be met?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed solution in detail
+      placeholder: |
+        Provide a detailed description of how you envision this feature working:
+        - User interface mockups or descriptions
+        - Workflow steps
+        - Integration points
+        - Data requirements
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what success looks like for this feature
+      placeholder: |
+        List specific, testable criteria that must be met:
+        - Given [context], when [action], then [expected result]
+        
+        Example:
+        - Given a medical device with a barcode, when I scan it with the mobile app, then the device details are displayed within 2 seconds
+        - Given invalid barcode data, when scanned, then an appropriate error message is shown
+    validations:
+      required: true
+
+  - type: textarea
+    id: medical-use-case
+    attributes:
+      label: Medical Use Case & Workflow
+      description: Describe the medical context and workflow integration
+      placeholder: |
+        Explain how this feature fits into medical workflows:
+        - Which healthcare roles will use this feature?
+        - In what clinical or operational scenarios?
+        - How does it integrate with existing medical procedures?
+        - What are the patient safety considerations?
+
+  - type: textarea
+    id: regulatory-considerations
+    attributes:
+      label: Regulatory & Compliance Considerations
+      description: Identify any regulatory requirements or compliance implications
+      placeholder: |
+        Consider regulatory aspects:
+        - FDA requirements (21 CFR Part 820)
+        - ISO standards compliance (ISO 13485, IEC 62304)
+        - HIPAA compliance for PHI data
+        - Medical device classification implications
+        - Clinical evaluation requirements
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered alternative approaches?
+      placeholder: |
+        Describe any alternative solutions you've considered:
+        - Why were they not suitable?
+        - What are the trade-offs?
+        - Are there existing tools or systems that partially address this need?
+
+  - type: textarea
+    id: technical-requirements
+    attributes:
+      label: Technical Requirements
+      description: Any specific technical considerations?
+      placeholder: |
+        Technical aspects to consider:
+        - Performance requirements
+        - Scalability needs
+        - Integration requirements
+        - Data storage/security needs
+        - Mobile/tablet compatibility
+        - Offline functionality requirements
+
+  - type: checkboxes
+    id: stakeholders
+    attributes:
+      label: Stakeholder Impact
+      description: Which stakeholder groups would benefit from this feature?
+      options:
+        - label: Surgical Staff
+        - label: Inventory Managers
+        - label: Quality Assurance Team
+        - label: Regulatory Affairs
+        - label: IT/System Administrators
+        - label: Clinical Engineers
+        - label: Hospital Administration
+        - label: External Partners/Vendors
+
+  - type: textarea
+    id: success-metrics
+    attributes:
+      label: Success Metrics
+      description: How would you measure the success of this feature?
+      placeholder: |
+        Define measurable outcomes:
+        - Time savings (e.g., "Reduce inventory check time by 50%")
+        - Error reduction (e.g., "Decrease manual entry errors by 90%")
+        - User satisfaction metrics
+        - Compliance improvements
+        - Patient safety metrics
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: Validation Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing feature requests to avoid duplicates
+          required: true
+        - label: I have considered the medical device regulatory implications
+          required: true
+        - label: I have provided sufficient detail for development assessment
+          required: true
+        - label: I understand this request will be evaluated through our medical device development process
+          required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that would be helpful
+      placeholder: |
+        Additional details:
+        - Links to relevant documentation
+        - References to industry standards
+        - Examples from other systems
+        - Timeline constraints
+        - Budget considerations

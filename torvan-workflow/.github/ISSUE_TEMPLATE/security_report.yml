@@ -1,0 +1,247 @@
+name: 🔒 Security Vulnerability Report
+description: Report a security vulnerability in TORVAN (Internal Use Only)
+title: "[SECURITY]: "
+labels: ["security", "critical", "needs-immediate-attention"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🚨 Security Vulnerability Report
+        
+        **⚠️ CRITICAL NOTICE**: This template is for internal security reporting only. 
+        
+        For external security researchers:
+        - Please email security@torvan.medical instead of filing a public issue
+        - Allow reasonable time for fixes before any public disclosure
+        - We follow responsible disclosure practices
+        
+        **Medical Device Security**: This system handles Protected Health Information (PHI) and medical device data. Security vulnerabilities may have patient safety implications.
+
+  - type: checkboxes
+    id: confidentiality
+    attributes:
+      label: Confidentiality Agreement
+      description: Security reporting requirements
+      options:
+        - label: I understand this is for internal security reporting only
+          required: true
+        - label: I will not disclose this vulnerability publicly until resolved
+          required: true
+        - label: I understand the medical device and PHI implications
+          required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Security Severity Level
+      description: Based on CVSS or similar scoring system
+      options:
+        - Critical (9.0-10.0) - Remote code execution, data breach
+        - High (7.0-8.9) - Privilege escalation, significant data exposure
+        - Medium (4.0-6.9) - Information disclosure, limited impact
+        - Low (0.1-3.9) - Minimal security impact
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vulnerability-type
+    attributes:
+      label: Vulnerability Type
+      description: Primary vulnerability classification
+      options:
+        - SQL Injection
+        - Cross-Site Scripting (XSS)
+        - Cross-Site Request Forgery (CSRF)
+        - Authentication Bypass
+        - Authorization Issues
+        - Data Exposure/Leakage
+        - Remote Code Execution
+        - Privilege Escalation
+        - Cryptographic Issues
+        - Input Validation
+        - Session Management
+        - API Security
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: vulnerability-description
+    attributes:
+      label: Vulnerability Description
+      description: Detailed description of the security issue
+      placeholder: |
+        Provide a comprehensive description:
+        - What is the vulnerability?
+        - Where does it occur in the system?
+        - What are the potential impacts?
+        - How could an attacker exploit this?
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-components
+    attributes:
+      label: Affected Components
+      description: Which parts of the system are affected?
+      placeholder: |
+        List specific components:
+        - API endpoints
+        - Database tables
+        - Frontend components
+        - Third-party integrations
+        - Configuration files
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed reproduction steps
+      placeholder: |
+        Provide step-by-step instructions:
+        1. Navigate to...
+        2. Enter data...
+        3. Submit request...
+        4. Observe vulnerability...
+        
+        Include any specific payloads, URLs, or code snippets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof-of-concept
+    attributes:
+      label: Proof of Concept
+      description: Evidence of the vulnerability (if safe to include)
+      placeholder: |
+        Provide proof of concept:
+        - Screenshots (sanitized of sensitive data)
+        - Code snippets
+        - Network requests/responses
+        - Log entries
+        
+        ⚠️ Do not include actual PHI or patient data
+
+  - type: textarea
+    id: impact-assessment
+    attributes:
+      label: Impact Assessment
+      description: Detailed impact analysis
+      placeholder: |
+        Assess the potential impact:
+        - Data that could be compromised
+        - Systems that could be affected
+        - Patient safety implications
+        - HIPAA compliance violations
+        - Medical device functionality impact
+        - Potential for lateral movement
+        - Regulatory compliance implications
+
+  - type: checkboxes
+    id: phi-impact
+    attributes:
+      label: PHI/Patient Data Impact
+      description: Does this vulnerability affect Protected Health Information?
+      options:
+        - label: Could expose patient data
+        - label: Could modify patient records
+        - label: Could affect patient safety systems
+        - label: Could compromise medical device data
+        - label: No PHI impact identified
+
+  - type: textarea
+    id: medical-device-impact
+    attributes:
+      label: Medical Device Impact
+      description: Specific impact on medical device functionality
+      placeholder: |
+        Consider medical device implications:
+        - Could affect device inventory tracking?
+        - Could compromise surgical workflow data?
+        - Could impact quality control processes?
+        - Could affect regulatory audit trails?
+        - Any patient safety implications?
+
+  - type: textarea
+    id: remediation-suggestions
+    attributes:
+      label: Suggested Remediation
+      description: Recommendations for fixing the vulnerability
+      placeholder: |
+        Suggest potential fixes:
+        - Input validation improvements
+        - Authentication/authorization changes
+        - Cryptographic updates
+        - Configuration changes
+        - Code changes required
+        - Third-party updates needed
+
+  - type: textarea
+    id: temporary-mitigations
+    attributes:
+      label: Temporary Mitigations
+      description: Short-term measures to reduce risk
+      placeholder: |
+        Immediate actions that could reduce risk:
+        - Configuration changes
+        - Access restrictions
+        - Monitoring enhancements
+        - User communication
+        - Process changes
+
+  - type: dropdown
+    id: disclosure-timeline
+    attributes:
+      label: Preferred Disclosure Timeline
+      description: When should this be addressed?
+      options:
+        - Immediate (Critical patient safety risk)
+        - 7 days (High risk, PHI exposure possible)
+        - 30 days (Medium risk, standard timeline)
+        - 90 days (Low risk, non-critical)
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing-environment
+    attributes:
+      label: Testing Environment
+      description: Where was this vulnerability discovered?
+      placeholder: |
+        Environment details:
+        - Development/Staging/Production
+        - System configuration
+        - Browser/client used
+        - Network conditions
+        - Authentication state
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: Security Reporting Checklist
+      description: Please confirm
+      options:
+        - label: I have verified this is a genuine security vulnerability
+          required: true
+        - label: I have not disclosed this vulnerability publicly
+          required: true
+        - label: I have considered the medical device and PHI implications
+          required: true
+        - label: I understand this will be handled with appropriate urgency
+          required: true
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes
+      description: Any other relevant information
+      placeholder: |
+        Additional context:
+        - Related vulnerabilities
+        - Industry references
+        - Similar issues in other systems
+        - Research references

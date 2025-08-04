@@ -1,0 +1,155 @@
+name: 🐛 Bug Report
+description: Report a bug in TORVAN Medical Workflow Management System
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🏥 Medical Software Bug Report
+        
+        Thank you for reporting a bug in TORVAN. This report becomes part of our quality management system and regulatory documentation.
+        
+        **⚠️ IMPORTANT**: If this bug relates to patient safety or data security, please also report it immediately via our internal escalation process.
+
+  - type: checkboxes
+    id: bug-type
+    attributes:
+      label: Bug Classification
+      description: Select all that apply
+      options:
+        - label: User Interface/UX issue
+        - label: Data integrity issue
+        - label: Performance issue
+        - label: Security vulnerability
+        - label: Medical device functionality
+        - label: Regulatory compliance issue
+        - label: Integration/API issue
+        - label: Database issue
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: Assess the impact on medical operations
+      options:
+        - Critical - System unusable, patient safety risk
+        - High - Major functionality broken, significant workflow impact
+        - Medium - Minor functionality broken, workaround available
+        - Low - Cosmetic issue, minimal impact
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk-level
+    attributes:
+      label: Medical Device Risk Level
+      description: Risk assessment per ISO 14971
+      options:
+        - High - Direct patient safety impact
+        - Medium - Indirect patient impact or data integrity
+        - Low - No patient impact, operational only
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Provide a clear and concise description of the bug
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: Describe the expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Describe the actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Information
+      description: Please provide environment details
+      placeholder: |
+        - OS: [e.g., Windows 10, macOS 12.0, Ubuntu 20.04]
+        - Browser: [e.g., Chrome 96, Firefox 95, Safari 15]
+        - TORVAN Version: [e.g., v1.2.3]
+        - Database Version: [if applicable]
+        - Node.js Version: [if applicable]
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots/Logs
+      description: Add screenshots or log files to help explain the problem
+      placeholder: Drag and drop screenshots here, or paste log excerpts
+
+  - type: textarea
+    id: medical-context
+    attributes:
+      label: Medical Use Case Context
+      description: Describe the medical workflow or use case affected by this bug
+      placeholder: |
+        - Which medical workflow is affected?
+        - What is the impact on healthcare providers?
+        - Are there patient safety implications?
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Is there a temporary workaround available?
+      placeholder: Describe any temporary solutions or workarounds
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: Validation Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have provided all required information above
+          required: true
+        - label: I understand this report becomes part of the quality management system
+          required: true
+        - label: I have assessed the medical device risk level appropriately
+          required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Any additional information that might be helpful

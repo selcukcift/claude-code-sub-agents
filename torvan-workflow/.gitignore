@@ -1,6 +1,9 @@
+# TORVAN Medical Workflow Management System
+# Comprehensive .gitignore for medical software development
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# === NODE.JS & PACKAGE MANAGERS ===
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -9,33 +12,209 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npmrc
+.yarnrc
 
-# testing
-/coverage
-
-# next.js
+# === NEXT.JS FRAMEWORK ===
+# Next.js build outputs
 /.next/
 /out/
+.next
+out
 
-# production
+# === BUILD & DISTRIBUTION ===
+# Production builds
 /build
+/dist
+*.tsbuildinfo
 
-# misc
-.DS_Store
+# === TESTING ===
+# Test coverage reports
+/coverage
+/.nyc_output
+/test-results/
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
+# === ENVIRONMENT & CONFIGURATION ===
+# Environment variables (CRITICAL for medical software)
+.env*
+.env
+.env.local
+.env.production
+.env.staging
+.env.test
+.env.development
+
+# Configuration files with sensitive data
+config/local.json
+config/production.json
+config/staging.json
+
+# === DATABASE & PERSISTENCE ===
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+/prisma/dev.db
+/prisma/dev.db-journal
+/database/backups/
+/database/dumps/
+/migrations/local/
+
+# === MEDICAL SOFTWARE SPECIFIC ===
+# Patient data and PHI (Protected Health Information)
+/patient-data/
+/phi-data/
+/medical-records/
+/test-patient-data/
+*.phi
+*.pii
+
+# Medical device logs and audit trails
+/audit-logs/
+/device-logs/
+/compliance-logs/
+/validation-reports/
+*.audit
+
+# Regulatory and compliance documents (typically managed separately)
+/regulatory/drafts/
+/fda-submissions/drafts/
+/iso-documents/drafts/
+
+# === SECURITY & CERTIFICATES ===
+# SSL/TLS certificates and keys
 *.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+/certificates/
+/ssl/
 
-# debug
+# Security scan results
+/security-reports/
+*.sarif
+
+# === LOGS & MONITORING ===
+# Application logs
+/logs
+*.log
+*.log.*
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# === TEMPORARY & CACHE FILES ===
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
 
-# vercel
+# Editor and IDE files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/.ropeproject
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# === DEPLOYMENT & CLOUD SERVICES ===
+# Vercel
 .vercel
+.vercel.json
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# AWS
+.aws/
+*.pem
+
+# Docker
+.dockerignore
+Dockerfile.dev
+docker-compose.override.yml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# === BACKUP & TEMPORARY FILES ===
+# Backup files
+*.backup
+*.bak
+*.orig
+*.rej
+*.swp
+*.tmp
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# === MEDICAL DEVICE DEVELOPMENT ===
+# Device firmware and embedded code builds
+/firmware/build/
+/embedded/dist/
+*.hex
+*.bin
+*.elf
+
+# Simulation and testing data
+/simulation-data/
+/test-vectors/
+/bench-test-results/
+
+# === DOCUMENTATION BUILDS ===
+# Generated documentation
+/docs/build/
+/docs/dist/
+/api-docs/generated/
+
+# === PERFORMANCE & PROFILING ===
+# Performance profiling data
+*.prof
+*.perf
+/profiling-data/
+
+# === VENDOR & THIRD-PARTY ===
+# Vendor directories (if not using package managers)
+/vendor/
+/third-party/
+
+# === CI/CD SPECIFIC ===
+# Build artifacts from CI/CD
+/artifacts/
+/reports/
+junit.xml
+coverage.xml
