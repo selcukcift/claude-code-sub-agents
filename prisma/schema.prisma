@@ -1,0 +1,1404 @@
+// =====================================================
+// TORVAN MEDICAL WORKFLOW MANAGEMENT SYSTEM
+// PRISMA DATABASE SCHEMA
+// =====================================================
+// 
+// This schema defines the complete database structure for the TORVAN system:
+// - Hierarchical Inventory Management (Categories → Assemblies → Sub-assemblies → Parts)
+// - Order Management with 8-phase lifecycle
+// - Dynamic BOM Generation with configuration rules
+// - Multi-role User Management & Security
+// - Quality Control & Production Tracking
+// - External System Integration
+// 
+// Performance Targets:
+// - BOM Generation: <5 seconds
+// - Order Search: <2 seconds  
+// - Support 50 concurrent users
+// =====================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// ENUMS FOR TYPE SAFETY
+// =====================================================
+
+enum UserRole {
+  ADMIN
+  PRODUCTION_COORDINATOR
+  PROCUREMENT_MANAGER
+  QC_INSPECTOR
+  ASSEMBLER
+  SERVICE_DEPT
+}
+
+enum OrderPhase {
+  DRAFT
+  CONFIGURATION
+  APPROVAL
+  PRODUCTION
+  QUALITY_CONTROL
+  PACKAGING
+  SHIPPING
+  DELIVERED
+}
+
+enum OrderType {
+  STANDARD
+  CUSTOM
+  RUSH
+  PROTOTYPE
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AssemblyType {
+  COMPONENT
+  KIT
+  SERVICE_PART
+  ACCESSORY
+}
+
+enum PartType {
+  COMPONENT
+  MATERIAL
+  HARDWARE
+  ELECTRONIC
+  CONSUMABLE
+}
+
+enum ComponentType {
+  PART
+  ASSEMBLY
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+  OBSOLETE
+  DEVELOPMENT
+}
+
+enum ProductionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum QCResult {
+  PASS
+  FAIL
+  CONDITIONAL_PASS
+  PENDING
+}
+
+enum BOMStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE
+  SUPERSEDED
+}
+
+enum BOMType {
+  STANDARD
+  CUSTOM
+  PROTOTYPE
+}
+
+enum GenerationMethod {
+  AUTOMATIC
+  MANUAL
+  HYBRID
+}
+
+enum ConfigurationRuleType {
+  VALIDATION
+  COMPONENT_SELECTION
+  PRICING
+  COMPATIBILITY
+}
+
+enum InspectionType {
+  VISUAL
+  MEASUREMENT
+  FUNCTIONAL
+  DOCUMENTATION
+}
+
+enum TaskType {
+  ASSEMBLY
+  FABRICATION
+  INSPECTION
+  PACKAGING
+  TESTING
+}
+
+enum QCProcessStage {
+  INCOMING
+  IN_PROCESS
+  FINAL
+  PACKAGING
+}
+
+enum SystemType {
+  ERP
+  DOCUMENT_MANAGEMENT
+  SHIPPING
+  CRM
+  FINANCIAL
+}
+
+enum DocumentType {
+  WORK_INSTRUCTION
+  SPECIFICATION
+  DRAWING
+  PHOTO
+  MANUAL
+  CERTIFICATE
+}
+
+enum AccessLevel {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CONFIDENTIAL
+}
+
+enum DocumentStatus {
+  DRAFT
+  APPROVED
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  SUSPENDED
+}
+
+enum CompanySize {
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum SyncType {
+  FULL
+  INCREMENTAL
+  MANUAL
+}
+
+enum SyncDirection {
+  INBOUND
+  OUTBOUND
+  BIDIRECTIONAL
+}
+
+enum SyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CONFIDENTIAL
+}
+
+enum AuditAction {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// =====================================================
+// USER MANAGEMENT & SECURITY MODELS
+// =====================================================
+
+model User {
+  id                    BigInt     @id @default(autoincrement())
+  username              String     @unique @db.VarChar(50)
+  email                 String     @unique @db.VarChar(255)
+  passwordHash          String     @map("password_hash") @db.VarChar(255)
+  
+  // Personal Information
+  firstName             String     @map("first_name") @db.VarChar(100)
+  lastName              String     @map("last_name") @db.VarChar(100)
+  phone                 String?    @db.VarChar(20)
+  jobTitle              String?    @map("job_title") @db.VarChar(100)
+  department            String?    @db.VarChar(100)
+  
+  // Authentication
+  lastLogin             DateTime?  @map("last_login")
+  failedLoginAttempts   Int        @default(0) @map("failed_login_attempts")
+  isLocked              Boolean    @default(false) @map("is_locked")
+  lockedUntil           DateTime?  @map("locked_until")
+  passwordExpiresAt     DateTime?  @map("password_expires_at")
+  mustChangePassword    Boolean    @default(false) @map("must_change_password")
+  
+  // Multi-Factor Authentication
+  mfaEnabled            Boolean    @default(false) @map("mfa_enabled")
+  mfaSecret             String?    @map("mfa_secret") @db.VarChar(255)
+  
+  // Status
+  isActive              Boolean    @default(true) @map("is_active")
+  emailVerified         Boolean    @default(false) @map("email_verified")
+  
+  // Preferences
+  timezone              String     @default("UTC") @db.VarChar(50)
+  language              String     @default("en") @db.VarChar(10)
+  uiPreferences         Json?      @map("ui_preferences")
+  
+  // Timestamps
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  userRoles             UserRole_Assignment[] @relation("UserRoleAssignments")
+  roleAssignmentsGiven  UserRole_Assignment[] @relation("RoleAssignmentsGiven")
+  createdOrders         Order[]    @relation("OrderCreatedBy")
+  assignedOrders        Order[]    @relation("OrderAssignedTo")
+  createdConfigurations Configuration[] @relation("ConfigurationCreatedBy")
+  generatedBOMs         BOM[]      @relation("BOMGeneratedBy")
+  approvedBOMs          BOM[]      @relation("BOMApprovedBy")
+  qcInspections         QCInspection[]
+  assignedTasks         ProductionTask[] @relation("TaskAssignedTo")
+  createdTasks          ProductionTask[] @relation("TaskAssignedBy")
+  uploadedDocuments     Document[] @relation("DocumentUploadedBy")
+  approvedDocuments     Document[] @relation("DocumentApprovedBy")
+  auditLogs             AuditLog[]
+  syncLogs              SyncLog[]
+  userSessions          UserSession[]
+  qcProcesses           QCProcess[]
+  qcApprovalsGiven      QCInspection[] @relation("QCApprovedBy")
+  configurationRules    ConfigurationRule[]
+  orderStatusHistory    OrderStatusHistory[]
+  rolePermissionsGranted RolePermission[]
+  
+  @@map("users")
+  @@index([username])
+  @@index([email])
+  @@index([isActive])
+  @@index([department])
+}
+
+model Role {
+  id                    BigInt     @id @default(autoincrement())
+  roleName              String     @unique @map("role_name") @db.VarChar(50)
+  roleCode              String     @unique @map("role_code") @db.VarChar(20)
+  description           String?
+  
+  // Role Hierarchy
+  parentRoleId          BigInt?    @map("parent_role_id")
+  roleLevel             Int        @default(1) @map("role_level")
+  
+  // Permission Overview
+  canCreateOrders       Boolean    @default(false) @map("can_create_orders")
+  canApproveOrders      Boolean    @default(false) @map("can_approve_orders")
+  canModifyBOMs         Boolean    @default(false) @map("can_modify_boms")
+  canAccessFinancials   Boolean    @default(false) @map("can_access_financials")
+  canManageUsers        Boolean    @default(false) @map("can_manage_users")
+  canConfigureSystem    Boolean    @default(false) @map("can_configure_system")
+  
+  isActive              Boolean    @default(true) @map("is_active")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  parentRole            Role?      @relation("RoleHierarchy", fields: [parentRoleId], references: [id])
+  childRoles            Role[]     @relation("RoleHierarchy")
+  userRoles             UserRole_Assignment[]
+  rolePermissions       RolePermission[]
+  
+  @@map("roles")
+  @@index([isActive])
+  @@index([parentRoleId])
+}
+
+model Permission {
+  id                    BigInt     @id @default(autoincrement())
+  permissionName        String     @unique @map("permission_name") @db.VarChar(100)
+  permissionCode        String     @unique @map("permission_code") @db.VarChar(50)
+  resourceType          String     @map("resource_type") @db.VarChar(50)
+  action                String     @db.VarChar(50)
+  description           String?
+  category              String     @db.VarChar(50)
+  
+  isActive              Boolean    @default(true) @map("is_active")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  
+  // Relationships
+  rolePermissions       RolePermission[]
+  
+  @@map("permissions")
+  @@index([resourceType])
+  @@index([category])
+  @@index([isActive])
+}
+
+model UserRole_Assignment {
+  id                    BigInt     @id @default(autoincrement()) @map("user_role_id")
+  userId                BigInt     @map("user_id")
+  roleId                BigInt     @map("role_id")
+  
+  // Assignment Context
+  assignedBy            BigInt     @map("assigned_by")
+  assignedAt            DateTime   @default(now()) @map("assigned_at")
+  effectiveFrom         DateTime   @default(now()) @map("effective_from") @db.Date
+  effectiveUntil        DateTime?  @map("effective_until") @db.Date
+  
+  // Role Scope Limitations
+  scopeRestrictions     Json?      @map("scope_restrictions")
+  
+  isActive              Boolean    @default(true) @map("is_active")
+  
+  // Relationships
+  user                  User       @relation("UserRoleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  role                  Role       @relation(fields: [roleId], references: [id])
+  assigner              User       @relation("RoleAssignmentsGiven", fields: [assignedBy], references: [id])
+  
+  @@map("user_roles")
+  @@unique([userId, roleId, isActive])
+  @@index([userId])
+  @@index([roleId])
+  @@index([effectiveFrom, effectiveUntil])
+}
+
+model RolePermission {
+  id                    BigInt     @id @default(autoincrement()) @map("role_permission_id")
+  roleId                BigInt     @map("role_id")
+  permissionId          BigInt     @map("permission_id")
+  
+  // Permission Constraints
+  conditions            Json?
+  scopeLimitations      Json?      @map("scope_limitations")
+  
+  grantedBy             BigInt     @map("granted_by")
+  grantedAt             DateTime   @default(now()) @map("granted_at")
+  
+  // Relationships
+  role                  Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission            Permission @relation(fields: [permissionId], references: [id])
+  granter               User       @relation(fields: [grantedBy], references: [id])
+  
+  @@map("role_permissions")
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// =====================================================
+// CUSTOMER MANAGEMENT MODELS
+// =====================================================
+
+model Customer {
+  id                    BigInt     @id @default(autoincrement()) @map("customer_id")
+  customerCode          String     @unique @map("customer_code") @db.VarChar(20)
+  
+  // Company Information
+  companyName           String     @map("company_name") @db.VarChar(200)
+  industry              String?    @db.VarChar(100)
+  companySize           CompanySize? @map("company_size")
+  
+  // Primary Contact
+  primaryContactName    String?    @map("primary_contact_name") @db.VarChar(100)
+  primaryContactEmail   String?    @map("primary_contact_email") @db.VarChar(255)
+  primaryContactPhone   String?    @map("primary_contact_phone") @db.VarChar(20)
+  
+  // Addresses
+  billingAddress        Json?      @map("billing_address")
+  shippingAddress       Json?      @map("shipping_address")
+  
+  // Business Terms
+  paymentTerms          Int        @default(30) @map("payment_terms")
+  creditLimit           Decimal?   @map("credit_limit") @db.Decimal(12,2)
+  taxExempt             Boolean    @default(false) @map("tax_exempt")
+  
+  // ERP Integration
+  erpCustomerId         String?    @map("erp_customer_id") @db.VarChar(50)
+  
+  // Status
+  customerStatus        CustomerStatus @default(ACTIVE) @map("customer_status")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  orders                Order[]
+  
+  @@map("customers")
+  @@index([customerCode])
+  @@index([companyName])
+  @@index([customerStatus])
+  @@index([erpCustomerId])
+}
+
+// =====================================================
+// INVENTORY MANAGEMENT MODELS
+// =====================================================
+
+model Category {
+  id                    String     @id @map("category_id") @db.VarChar(10)
+  name                  String     @db.VarChar(100)
+  description           String?
+  parentCategoryId      String?    @map("parent_category_id") @db.VarChar(10)
+  displayOrder          Int        @default(0) @map("display_order")
+  isActive              Boolean    @default(true) @map("is_active")
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  parentCategory        Category?  @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  childCategories       Category[] @relation("CategoryHierarchy")
+  subcategories         Subcategory[]
+  assemblies            Assembly[]
+  
+  @@map("categories")
+  @@index([parentCategoryId])
+  @@index([isActive])
+  @@index([displayOrder])
+}
+
+model Subcategory {
+  id                    String     @id @map("subcategory_id") @db.VarChar(20)
+  categoryId            String     @map("category_id") @db.VarChar(10)
+  name                  String     @db.VarChar(100)
+  description           String?
+  displayOrder          Int        @default(0) @map("display_order")
+  isActive              Boolean    @default(true) @map("is_active")
+  
+  // Product specifications
+  specifications        Json?
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  category              Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  assemblies            Assembly[]
+  
+  @@map("subcategories")
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([displayOrder])
+}
+
+model Assembly {
+  id                    String     @id @map("assembly_id") @db.VarChar(50)
+  name                  String     @db.VarChar(200)
+  description           String?
+  categoryId            String?    @map("category_id") @db.VarChar(10)
+  subcategoryId         String?    @map("subcategory_id") @db.VarChar(20)
+  
+  // Assembly Classification
+  assemblyType          AssemblyType @default(COMPONENT) @map("assembly_type")
+  
+  // Hierarchy Support
+  parentAssemblyId      String?    @map("parent_assembly_id") @db.VarChar(50)
+  assemblyLevel         Int        @default(1) @map("assembly_level")
+  
+  // Ordering Configuration
+  canOrder              Boolean    @default(true) @map("can_order")
+  isKit                 Boolean    @default(false) @map("is_kit")
+  requiresConfiguration Boolean    @default(false) @map("requires_configuration")
+  
+  // Financial Information
+  basePrice             Decimal?   @map("base_price") @db.Decimal(12,2)
+  costPrice             Decimal?   @map("cost_price") @db.Decimal(12,2)
+  currency              String     @default("USD") @db.VarChar(3)
+  
+  // Physical Properties
+  weightKg              Decimal?   @map("weight_kg") @db.Decimal(8,3)
+  dimensions            Json?
+  
+  // Status and Versioning
+  status                Status     @default(ACTIVE)
+  version               String     @default("1.0") @db.VarChar(20)
+  effectiveDate         DateTime   @default(now()) @map("effective_date") @db.Date
+  endDate               DateTime?  @map("end_date") @db.Date
+  
+  // Manufacturing Information
+  leadTimeDays          Int        @default(0) @map("lead_time_days")
+  buildTimeHours        Decimal?   @map("build_time_hours") @db.Decimal(6,2)
+  complexityScore       Int        @default(1) @map("complexity_score")
+  
+  // Search and Classification
+  tags                  String[]
+  productFamily         String?    @map("product_family") @db.VarChar(50)
+  marketSegment         String?    @map("market_segment") @db.VarChar(50)
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  category              Category?  @relation(fields: [categoryId], references: [id])
+  subcategory           Subcategory? @relation(fields: [subcategoryId], references: [id])
+  parentAssembly        Assembly?  @relation("AssemblyHierarchy", fields: [parentAssemblyId], references: [id])
+  childAssemblies       Assembly[] @relation("AssemblyHierarchy")
+  assemblyComponents    AssemblyComponent[] @relation("AssemblyComponents")
+  componentUsages       AssemblyComponent[] @relation("ComponentUsages")
+  orderItems            OrderItem[]
+  configurations        Configuration[]
+  boms                  BOM[]
+  productVariants       ProductVariant[]
+  qcProcesses           QCProcess[]
+  
+  @@map("assemblies")
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([parentAssemblyId])
+  @@index([status])
+  @@index([assemblyType])
+  @@index([canOrder])
+  @@index([effectiveDate, endDate])
+  @@index([complexityScore])
+  @@index([productFamily])
+}
+
+model Part {
+  id                    String     @id @map("part_id") @db.VarChar(50)
+  name                  String     @db.VarChar(200)
+  description           String?
+  
+  // Manufacturer Information
+  manufacturerPartNumber String?   @map("manufacturer_part_number") @db.VarChar(100)
+  manufacturerName      String?    @map("manufacturer_name") @db.VarChar(200)
+  manufacturerInfo      String?    @map("manufacturer_info")
+  supplierPartNumber    String?    @map("supplier_part_number") @db.VarChar(100)
+  
+  // Part Classification
+  partType              PartType   @default(COMPONENT) @map("part_type")
+  
+  // Measurement and Costing
+  unitOfMeasure         String     @default("EACH") @map("unit_of_measure") @db.VarChar(20)
+  unitCost              Decimal?   @map("unit_cost") @db.Decimal(10,4)
+  currency              String     @default("USD") @db.VarChar(3)
+  weightKg              Decimal?   @map("weight_kg") @db.Decimal(8,3)
+  
+  // Physical Properties
+  dimensions            Json?
+  specifications        Json?
+  material              String?    @db.VarChar(100)
+  color                 String?    @db.VarChar(50)
+  finish                String?    @db.VarChar(100)
+  
+  // Status and Availability
+  status                Status     @default(ACTIVE)
+  
+  // Custom Parts (700-series)
+  isCustomPart          Boolean    @default(false) @map("is_custom_part")
+  customPartCategory    String?    @map("custom_part_category") @db.VarChar(20)
+  customSpecifications  Json?      @map("custom_specifications")
+  
+  // Inventory Management
+  leadTimeDays          Int        @default(0) @map("lead_time_days")
+  minOrderQty           Int        @default(1) @map("min_order_qty")
+  maxOrderQty           Int?       @map("max_order_qty")
+  reorderPoint          Int?       @map("reorder_point")
+  safetyStock           Int        @default(0) @map("safety_stock")
+  
+  // Quality and Compliance
+  qualityGrade          String?    @map("quality_grade") @db.VarChar(20)
+  certifications        String[]
+  hazmatInfo            Json?      @map("hazmat_info")
+  
+  // Search and Classification
+  tags                  String[]
+  keywords              String[]
+  
+  // Version Control
+  version               String     @default("1.0") @db.VarChar(20)
+  effectiveDate         DateTime   @default(now()) @map("effective_date") @db.Date
+  endDate               DateTime?  @map("end_date") @db.Date
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  assemblyComponents    AssemblyComponent[] @relation("PartComponents")
+  bomLineItems          BOMLineItem[]
+  
+  @@map("parts")
+  @@index([status])
+  @@index([partType])
+  @@index([isCustomPart])
+  @@index([manufacturerPartNumber])
+  @@index([supplierPartNumber])
+  @@index([effectiveDate, endDate])
+  @@index([leadTimeDays])
+  @@index([unitCost])
+}
+
+model AssemblyComponent {
+  id                    BigInt     @id @default(autoincrement())
+  assemblyId            String     @map("assembly_id") @db.VarChar(50)
+  componentId           String     @map("component_id") @db.VarChar(50)
+  componentType         ComponentType @default(PART) @map("component_type")
+  
+  // Quantity and Measurement
+  quantity              Decimal    @default(1) @db.Decimal(10,3)
+  unitOfMeasure         String     @default("EACH") @map("unit_of_measure") @db.VarChar(20)
+  wasteFactor           Decimal    @default(0) @map("waste_factor") @db.Decimal(5,4)
+  
+  // Assembly Information
+  positionSequence      Int        @default(0) @map("position_sequence")
+  assemblyStep          String?    @map("assembly_step") @db.VarChar(100)
+  assemblyTimeMinutes   Decimal?   @map("assembly_time_minutes") @db.Decimal(6,2)
+  
+  // Configuration and Options
+  isOptional            Boolean    @default(false) @map("is_optional")
+  isSubstitute          Boolean    @default(false) @map("is_substitute")
+  substituteGroup       String?    @map("substitute_group") @db.VarChar(20)
+  configurationRules    Json?      @map("configuration_rules")
+  
+  // Installation Details
+  installationNotes     String?    @map("installation_notes")
+  requiredTools         String[]   @map("required_tools")
+  skillLevel            Int        @default(1) @map("skill_level")
+  safetyRequirements    String?    @map("safety_requirements")
+  
+  // Status and Versioning
+  isActive              Boolean    @default(true) @map("is_active")
+  effectiveDate         DateTime   @default(now()) @map("effective_date") @db.Date
+  endDate               DateTime?  @map("end_date") @db.Date
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  assembly              Assembly   @relation("AssemblyComponents", fields: [assemblyId], references: [id], onDelete: Cascade)
+  componentPart         Part?      @relation("PartComponents", fields: [componentId], references: [id], map: "componentPart")
+  componentAssembly     Assembly?  @relation("ComponentUsages", fields: [componentId], references: [id], map: "componentAssembly")
+  
+  @@map("assembly_components")
+  @@unique([assemblyId, componentId, componentType, effectiveDate])
+  @@index([assemblyId])
+  @@index([componentId, componentType])
+  @@index([substituteGroup])
+  @@index([isOptional])
+  @@index([isActive])
+  @@index([assemblyId, positionSequence])
+  @@index([effectiveDate, endDate])
+}
+
+model ProductVariant {
+  id                    BigInt     @id @default(autoincrement()) @map("variant_id")
+  assemblyId            String     @map("assembly_id") @db.VarChar(50)
+  variantName           String     @map("variant_name") @db.VarChar(100)
+  variantCode           String     @map("variant_code") @db.VarChar(50)
+  
+  // Variant Configuration
+  configurationParameters Json     @map("configuration_parameters")
+  priceAdjustment       Decimal    @default(0) @map("price_adjustment") @db.Decimal(10,2)
+  weightAdjustmentKg    Decimal    @default(0) @map("weight_adjustment_kg") @db.Decimal(8,3)
+  
+  // Manufacturing Impact
+  leadTimeAdjustmentDays Int       @default(0) @map("lead_time_adjustment_days")
+  complexityAdjustment  Int        @default(0) @map("complexity_adjustment")
+  
+  // Status
+  isActive              Boolean    @default(true) @map("is_active")
+  isDefault             Boolean    @default(false) @map("is_default")
+  
+  // Metadata
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  createdBy             BigInt?    @map("created_by")
+  updatedBy             BigInt?    @map("updated_by")
+  
+  // Relationships
+  assembly              Assembly   @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  
+  @@map("product_variants")
+  @@unique([assemblyId, variantCode])
+  @@index([assemblyId])
+  @@index([isActive])
+  @@index([isDefault])
+}
+
+// =====================================================
+// ORDER MANAGEMENT MODELS
+// =====================================================
+
+model Order {
+  id                    String     @id @map("order_id") @db.VarChar(20)
+  orderNumber           String     @unique @map("order_number") @db.VarChar(50)
+  customerId            BigInt     @map("customer_id")
+  customerPoNumber      String?    @map("customer_po_number") @db.VarChar(100)
+  orderType             OrderType  @default(STANDARD) @map("order_type")
+  currentPhase          OrderPhase @default(DRAFT) @map("current_phase")
+  priority              Priority   @default(NORMAL)
+  
+  // Financial Information
+  subtotal              Decimal    @default(0) @db.Decimal(12,2)
+  taxAmount             Decimal    @default(0) @map("tax_amount") @db.Decimal(12,2)
+  shippingAmount        Decimal    @default(0) @map("shipping_amount") @db.Decimal(12,2)
+  totalAmount           Decimal    @default(0) @map("total_amount") @db.Decimal(12,2)
+  currency              String     @default("USD") @db.VarChar(3)
+  
+  // Dates
+  orderDate             DateTime   @map("order_date") @db.Date
+  requestedDeliveryDate DateTime?  @map("requested_delivery_date") @db.Date
+  promisedDeliveryDate  DateTime?  @map("promised_delivery_date") @db.Date
+  actualDeliveryDate    DateTime?  @map("actual_delivery_date") @db.Date
+  
+  // Assignment and Tracking
+  assignedTo            BigInt?    @map("assigned_to")
+  createdBy             BigInt     @map("created_by")
+  
+  // Status and Notes
+  isRushOrder           Boolean    @default(false) @map("is_rush_order")
+  specialInstructions   String?    @map("special_instructions")
+  internalNotes         String?    @map("internal_notes")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  customer              Customer   @relation(fields: [customerId], references: [id])
+  assignedUser          User?      @relation("OrderAssignedTo", fields: [assignedTo], references: [id])
+  creator               User       @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  orderItems            OrderItem[]
+  statusHistory         OrderStatusHistory[]
+  
+  @@map("orders")
+  @@index([customerId])
+  @@index([currentPhase])
+  @@index([priority])
+  @@index([orderDate])
+  @@index([assignedTo])
+  @@index([requestedDeliveryDate])
+}
+
+model OrderItem {
+  id                    BigInt     @id @default(autoincrement()) @map("item_id")
+  orderId               String     @map("order_id") @db.VarChar(20)
+  lineNumber            Int        @map("line_number")
+  assemblyId            String     @map("assembly_id") @db.VarChar(50)
+  quantity              Int        @default(1)
+  unitPrice             Decimal?   @map("unit_price") @db.Decimal(10,2)
+  lineTotal             Decimal?   @map("line_total") @db.Decimal(12,2)
+  
+  // Configuration Reference
+  configurationId       BigInt?    @map("configuration_id")
+  bomId                 BigInt?    @map("bom_id")
+  
+  // Production Tracking
+  productionStatus      ProductionStatus @default(PENDING) @map("production_status")
+  productionStartedAt   DateTime?  @map("production_started_at")
+  productionCompletedAt DateTime?  @map("production_completed_at")
+  
+  // Custom Specifications
+  customSpecifications  Json?      @map("custom_specifications")
+  specialInstructions   String?    @map("special_instructions")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  order                 Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  assembly              Assembly   @relation(fields: [assemblyId], references: [id])
+  configuration         Configuration? @relation(fields: [configurationId], references: [id])
+  bom                   BOM?       @relation(fields: [bomId], references: [id])
+  productionTasks       ProductionTask[]
+  qcInspections         QCInspection[]
+  
+  @@map("order_items")
+  @@unique([orderId, lineNumber])
+  @@unique([configurationId])
+  @@index([orderId])
+  @@index([assemblyId])
+  @@index([productionStatus])
+}
+
+model OrderStatusHistory {
+  id                    BigInt     @id @default(autoincrement()) @map("history_id")
+  orderId               String     @map("order_id") @db.VarChar(20)
+  fromPhase             OrderPhase? @map("from_phase")
+  toPhase               OrderPhase @map("to_phase")
+  changedBy             BigInt     @map("changed_by")
+  changeReason          String?    @map("change_reason")
+  phaseDurationHours    Decimal?   @map("phase_duration_hours") @db.Decimal(8,2)
+  notes                 String?
+  changedAt             DateTime   @default(now()) @map("changed_at")
+  
+  // Relationships
+  order                 Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user                  User       @relation(fields: [changedBy], references: [id])
+  
+  @@map("order_status_history")
+  @@index([orderId])
+  @@index([toPhase])
+  @@index([changedAt])
+}
+
+// =====================================================
+// BOM GENERATION & CONFIGURATION MODELS
+// =====================================================
+
+model Configuration {
+  id                    BigInt     @id @default(autoincrement()) @map("configuration_id")
+  configurationName     String     @map("configuration_name") @db.VarChar(100)
+  orderItemId           BigInt?    @map("order_item_id")
+  assemblyId            String     @map("assembly_id") @db.VarChar(50)
+  
+  // Sink Configuration Parameters
+  sinkLengthInches      Int?       @map("sink_length_inches")
+  sinkWidthInches       Int        @default(20) @map("sink_width_inches")
+  basinCount            Int        @default(1) @map("basin_count")
+  basinType             String     @default("STANDARD") @db.VarChar(20)
+  basinDepthInches      Int        @default(8) @map("basin_depth_inches")
+  
+  // Features Configuration
+  hasLifter             Boolean    @default(false) @map("has_lifter")
+  lifterType            String?    @map("lifter_type") @db.VarChar(20)
+  hasOverheadLight      Boolean    @default(false) @map("has_overhead_light")
+  hasBasinLights        Boolean    @default(false) @map("has_basin_lights")
+  hasDosingPump         Boolean    @default(false) @map("has_dosing_pump")
+  hasTemperatureControl Boolean    @default(false) @map("has_temperature_control")
+  
+  // Pegboard Configuration
+  pegboardType          String     @default("PERFORATED") @db.VarChar(20)
+  pegboardColor         String?    @map("pegboard_color") @db.VarChar(20)
+  
+  // Water Configuration
+  waterType             String     @default("STANDARD") @db.VarChar(20)
+  temperatureMonitoring Boolean    @default(false) @map("temperature_monitoring")
+  
+  // Configuration Rules Application
+  configurationRules    Json?      @map("configuration_rules")
+  validationResults     Json?      @map("validation_results")
+  isValid               Boolean    @default(false) @map("is_valid")
+  
+  // Versioning
+  version               String     @default("1.0") @db.VarChar(20)
+  parentConfigurationId BigInt?    @map("parent_configuration_id")
+  
+  createdBy             BigInt     @map("created_by")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  orderItem             OrderItem?
+  assembly              Assembly   @relation(fields: [assemblyId], references: [id])
+  parentConfiguration   Configuration? @relation("ConfigurationRevisions", fields: [parentConfigurationId], references: [id])
+  childConfigurations   Configuration[] @relation("ConfigurationRevisions")
+  creator               User       @relation("ConfigurationCreatedBy", fields: [createdBy], references: [id])
+  boms                  BOM[]
+  
+  @@map("configurations")
+  @@index([orderItemId])
+  @@index([assemblyId])
+  @@index([isValid])
+}
+
+model BOM {
+  id                    BigInt     @id @default(autoincrement()) @map("bom_id")
+  bomNumber             String     @unique @map("bom_number") @db.VarChar(50)
+  configurationId       BigInt     @map("configuration_id")
+  assemblyId            String     @map("assembly_id") @db.VarChar(50)
+  bomType               BOMType    @default(STANDARD) @map("bom_type")
+  
+  // BOM Metadata
+  totalPartsCount       Int        @default(0) @map("total_parts_count")
+  totalEstimatedCost    Decimal    @default(0) @map("total_estimated_cost") @db.Decimal(12,2)
+  totalEstimatedWeightKg Decimal   @default(0) @map("total_estimated_weight_kg") @db.Decimal(10,3)
+  estimatedBuildHours   Decimal    @default(0) @map("estimated_build_hours") @db.Decimal(8,2)
+  
+  // Status and Approval
+  status                BOMStatus  @default(DRAFT)
+  approvedBy            BigInt?    @map("approved_by")
+  approvedAt            DateTime?  @map("approved_at")
+  
+  // Version Control
+  version               String     @default("1.0") @db.VarChar(20)
+  parentBomId           BigInt?    @map("parent_bom_id")
+  
+  // Generation Information
+  generatedBy           BigInt     @map("generated_by")
+  generationMethod      GenerationMethod @default(AUTOMATIC) @map("generation_method")
+  generationRulesApplied Json?     @map("generation_rules_applied")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  configuration         Configuration @relation(fields: [configurationId], references: [id])
+  assembly              Assembly   @relation(fields: [assemblyId], references: [id])
+  approver              User?      @relation("BOMApprovedBy", fields: [approvedBy], references: [id])
+  generator             User       @relation("BOMGeneratedBy", fields: [generatedBy], references: [id])
+  parentBom             BOM?       @relation("BOMRevisions", fields: [parentBomId], references: [id])
+  childBoms             BOM[]      @relation("BOMRevisions")
+  bomLineItems          BOMLineItem[]
+  orderItems            OrderItem[]
+  
+  @@map("boms")
+  @@index([configurationId])
+  @@index([assemblyId])
+  @@index([status])
+  @@index([parentBomId])
+}
+
+model BOMLineItem {
+  id                    BigInt     @id @default(autoincrement()) @map("line_item_id")
+  bomId                 BigInt     @map("bom_id")
+  lineNumber            Int        @map("line_number")
+  
+  // Component Reference
+  componentId           String     @map("component_id") @db.VarChar(50)
+  componentType         ComponentType @map("component_type")
+  
+  // Quantity and Measurements
+  quantity              Decimal    @default(1) @map("quantity") @db.Decimal(10,3)
+  unitOfMeasure         String     @default("EACH") @map("unit_of_measure") @db.VarChar(20)
+  unitCost              Decimal?   @map("unit_cost") @db.Decimal(10,4)
+  lineTotalCost         Decimal?   @map("line_total_cost") @db.Decimal(12,2)
+  
+  // Configuration Context
+  requiredForConfig     Json?      @map("required_for_config")
+  conditionalLogic      String?    @map("conditional_logic")
+  
+  // Substitution Information
+  isSubstitute          Boolean    @default(false) @map("is_substitute")
+  primaryComponentId    String?    @map("primary_component_id") @db.VarChar(50)
+  substituteGroup       String?    @map("substitute_group") @db.VarChar(20)
+  preferenceOrder       Int        @default(1) @map("preference_order")
+  
+  // Custom Part Information
+  isCustomPart          Boolean    @default(false) @map("is_custom_part")
+  customPartSpecifications Json?   @map("custom_part_specifications")
+  
+  // Production Information
+  assemblySequence      Int        @default(0) @map("assembly_sequence")
+  installationNotes     String?    @map("installation_notes")
+  requiredTools         Json?      @map("required_tools")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  
+  // Relationships
+  bom                   BOM        @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  part                  Part?      @relation(fields: [componentId], references: [id])
+  
+  @@map("bom_line_items")
+  @@unique([bomId, lineNumber])
+  @@index([bomId])
+  @@index([componentId, componentType])
+  @@index([isCustomPart])
+  @@index([substituteGroup])
+}
+
+model ConfigurationRule {
+  id                    BigInt     @id @default(autoincrement()) @map("rule_id")
+  ruleName              String     @map("rule_name") @db.VarChar(100)
+  ruleType              ConfigurationRuleType @map("rule_type")
+  
+  // Rule Conditions
+  conditions            Json       @map("conditions")
+  actions               Json       @map("actions")
+  
+  // Rule Scope
+  appliesToAssemblies   Json?      @map("applies_to_assemblies")
+  appliesToCategories   Json?      @map("applies_to_categories")
+  
+  // Rule Priority and Status
+  priority              Int        @default(100)
+  isActive              Boolean    @default(true) @map("is_active")
+  
+  // Rule Metadata
+  description           String?
+  examples              Json?
+  
+  createdBy             BigInt     @map("created_by")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  creator               User       @relation(fields: [createdBy], references: [id])
+  
+  @@map("configuration_rules")
+  @@index([ruleType])
+  @@index([isActive])
+  @@index([priority])
+}
+
+// =====================================================
+// QUALITY CONTROL & PRODUCTION TRACKING MODELS
+// =====================================================
+
+model QCProcess {
+  id                    BigInt     @id @default(autoincrement()) @map("qc_process_id")
+  processName           String     @map("process_name") @db.VarChar(100)
+  assemblyId            String?    @map("assembly_id") @db.VarChar(50)
+  processStage          QCProcessStage @map("process_stage")
+  
+  // Process Definition
+  description           String?
+  inspectionCriteria    Json?      @map("inspection_criteria")
+  requiredPhotos        Json?      @map("required_photos")
+  passThresholdPercentage Decimal  @default(100.00) @map("pass_threshold_percentage") @db.Decimal(5,2)
+  
+  // Time Estimates
+  estimatedDurationMinutes Int     @default(30) @map("estimated_duration_minutes")
+  
+  isActive              Boolean    @default(true) @map("is_active")
+  createdBy             BigInt     @map("created_by")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  assembly              Assembly?  @relation(fields: [assemblyId], references: [id])
+  creator               User       @relation(fields: [createdBy], references: [id])
+  qcInspections         QCInspection[]
+  
+  @@map("qc_processes")
+  @@index([assemblyId])
+  @@index([processStage])
+  @@index([isActive])
+}
+
+model QCInspection {
+  id                    BigInt     @id @default(autoincrement()) @map("inspection_id")
+  orderItemId           BigInt     @map("order_item_id")
+  qcProcessId           BigInt     @map("qc_process_id")
+  
+  // Inspection Details
+  inspectorId           BigInt     @map("inspector_id")
+  inspectionDate        DateTime   @map("inspection_date") @db.Date
+  inspectionStartTime   DateTime?  @map("inspection_start_time")
+  inspectionEndTime     DateTime?  @map("inspection_end_time")
+  
+  // Results
+  overallResult         QCResult   @default(PENDING) @map("overall_result")
+  passPercentage        Decimal?   @map("pass_percentage") @db.Decimal(5,2)
+  
+  // Documentation
+  inspectionNotes       String?    @map("inspection_notes")
+  correctiveActions     String?    @map("corrective_actions")
+  
+  // Approval
+  approvedBy            BigInt?    @map("approved_by")
+  approvedAt            DateTime?  @map("approved_at")
+  approvalNotes         String?    @map("approval_notes")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  orderItem             OrderItem  @relation(fields: [orderItemId], references: [id])
+  qcProcess             QCProcess  @relation(fields: [qcProcessId], references: [id])
+  inspector             User       @relation(fields: [inspectorId], references: [id])
+  approver              User?      @relation("QCApprovedBy", fields: [approvedBy], references: [id])
+  inspectionItems       QCInspectionItem[]
+  
+  @@map("qc_inspections")
+  @@index([orderItemId])
+  @@index([qcProcessId])
+  @@index([inspectorId])
+  @@index([inspectionDate])
+  @@index([overallResult])
+}
+
+model QCInspectionItem {
+  id                    BigInt     @id @default(autoincrement()) @map("inspection_item_id")
+  inspectionId          BigInt     @map("inspection_id")
+  
+  // Inspection Item Details
+  itemSequence          Int        @map("item_sequence")
+  itemDescription       String     @map("item_description")
+  inspectionType        InspectionType @map("inspection_type")
+  
+  // Criteria and Results
+  acceptanceCriteria    String?    @map("acceptance_criteria")
+  measuredValue         String?    @map("measured_value") @db.VarChar(100)
+  expectedValue         String?    @map("expected_value") @db.VarChar(100)
+  tolerance             String?    @db.VarChar(50)
+  result                QCResult   @map("result")
+  
+  // Notes and Actions
+  notes                 String?
+  correctiveAction      String?    @map("corrective_action")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  
+  // Relationships
+  inspection            QCInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  
+  @@map("qc_inspection_items")
+  @@unique([inspectionId, itemSequence])
+  @@index([inspectionId])
+  @@index([result])
+}
+
+model ProductionTask {
+  id                    BigInt     @id @default(autoincrement()) @map("task_id")
+  orderItemId           BigInt     @map("order_item_id")
+  taskName              String     @map("task_name") @db.VarChar(200)
+  taskType              TaskType   @map("task_type")
+  
+  // Task Sequence and Dependencies
+  sequenceOrder         Int        @map("sequence_order")
+  dependsOnTaskId       BigInt?    @map("depends_on_task_id")
+  
+  // Assignment
+  assignedTo            BigInt?    @map("assigned_to")
+  assignedBy            BigInt?    @map("assigned_by")
+  assignedAt            DateTime?  @map("assigned_at")
+  
+  // Work Instructions
+  workInstructions      String?    @map("work_instructions")
+  requiredTools         Json?      @map("required_tools")
+  safetyRequirements    String?    @map("safety_requirements")
+  estimatedHours        Decimal?   @map("estimated_hours") @db.Decimal(6,2)
+  
+  // Status and Progress
+  status                ProductionStatus @default(PENDING)
+  progressPercentage    Decimal    @default(0) @map("progress_percentage") @db.Decimal(5,2)
+  
+  // Time Tracking
+  actualStartTime       DateTime?  @map("actual_start_time")
+  actualEndTime         DateTime?  @map("actual_end_time")
+  actualHours           Decimal?   @map("actual_hours") @db.Decimal(6,2)
+  
+  // Notes and Issues
+  workNotes             String?    @map("work_notes")
+  issuesEncountered     String?    @map("issues_encountered")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  orderItem             OrderItem  @relation(fields: [orderItemId], references: [id])
+  dependsOnTask         ProductionTask? @relation("TaskDependency", fields: [dependsOnTaskId], references: [id])
+  dependentTasks        ProductionTask[] @relation("TaskDependency")
+  assignedUser          User?      @relation("TaskAssignedTo", fields: [assignedTo], references: [id])
+  assignedByUser        User?      @relation("TaskAssignedBy", fields: [assignedBy], references: [id])
+  
+  @@map("production_tasks")
+  @@index([orderItemId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([sequenceOrder])
+  @@index([dependsOnTaskId])
+}
+
+// =====================================================
+// INTEGRATION & EXTERNAL SYSTEMS MODELS
+// =====================================================
+
+model ExternalSystem {
+  id                    BigInt     @id @default(autoincrement()) @map("system_id")
+  systemName            String     @unique @map("system_name") @db.VarChar(100)
+  systemType            SystemType @map("system_type")
+  
+  // Connection Details
+  endpointUrl           String?    @map("endpoint_url") @db.VarChar(500)
+  authenticationType    String     @map("authentication_type") @db.VarChar(20)
+  connectionConfig      Json?      @map("connection_config")
+  
+  // Sync Configuration
+  syncFrequencyMinutes  Int        @default(60) @map("sync_frequency_minutes")
+  lastSyncAt            DateTime?  @map("last_sync_at")
+  nextSyncAt            DateTime?  @map("next_sync_at")
+  
+  // Status
+  isActive              Boolean    @default(true) @map("is_active")
+  isConnected           Boolean    @default(false) @map("is_connected")
+  lastConnectionTest    DateTime?  @map("last_connection_test")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  syncLogs              SyncLog[]
+  
+  @@map("external_systems")
+  @@index([systemType])
+  @@index([isActive])
+}
+
+model SyncLog {
+  id                    BigInt     @id @default(autoincrement()) @map("sync_id")
+  systemId              BigInt     @map("system_id")
+  syncType              SyncType   @map("sync_type")
+  syncDirection         SyncDirection @map("sync_direction")
+  
+  // Sync Details
+  dataType              String     @map("data_type") @db.VarChar(50)
+  recordsProcessed      Int        @default(0) @map("records_processed")
+  recordsSuccessful     Int        @default(0) @map("records_successful")
+  recordsFailed         Int        @default(0) @map("records_failed")
+  
+  // Timing
+  syncStartedAt         DateTime   @map("sync_started_at")
+  syncCompletedAt       DateTime?  @map("sync_completed_at")
+  durationSeconds       Int?       @map("duration_seconds")
+  
+  // Results
+  status                SyncStatus
+  errorMessage          String?    @map("error_message")
+  syncDetails           Json?      @map("sync_details")
+  
+  initiatedBy           BigInt?    @map("initiated_by")
+  
+  // Relationships
+  system                ExternalSystem @relation(fields: [systemId], references: [id])
+  initiator             User?      @relation(fields: [initiatedBy], references: [id])
+  
+  @@map("sync_log")
+  @@index([systemId])
+  @@index([dataType])
+  @@index([status])
+  @@index([syncStartedAt])
+}
+
+model Document {
+  id                    BigInt     @id @default(autoincrement()) @map("document_id")
+  documentName          String     @map("document_name") @db.VarChar(255)
+  documentType          DocumentType @map("document_type")
+  
+  // File Information
+  fileName              String     @map("file_name") @db.VarChar(255)
+  filePath              String     @map("file_path") @db.VarChar(1000)
+  fileSizeBytes         BigInt?    @map("file_size_bytes")
+  mimeType              String?    @map("mime_type") @db.VarChar(100)
+  fileHash              String?    @map("file_hash") @db.VarChar(64)
+  
+  // Document Metadata
+  version               String     @default("1.0") @db.VarChar(20)
+  description           String?
+  tags                  Json?
+  
+  // Associations
+  relatedToType         String     @map("related_to_type") @db.VarChar(20)
+  relatedToId           String     @map("related_to_id") @db.VarChar(50)
+  
+  // Access Control
+  accessLevel           AccessLevel @default(INTERNAL) @map("access_level")
+  
+  // Status and Versioning
+  status                DocumentStatus @default(DRAFT)
+  approvedBy            BigInt?    @map("approved_by")
+  approvedAt            DateTime?  @map("approved_at")
+  
+  uploadedBy            BigInt     @map("uploaded_by")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  approver              User?      @relation("DocumentApprovedBy", fields: [approvedBy], references: [id])
+  uploader              User       @relation("DocumentUploadedBy", fields: [uploadedBy], references: [id])
+  
+  @@map("documents")
+  @@index([documentType])
+  @@index([relatedToType, relatedToId])
+  @@index([status])
+  @@index([accessLevel])
+}
+
+// =====================================================
+// AUDIT AND LOGGING MODELS
+// =====================================================
+
+model AuditLog {
+  id                    BigInt     @id @default(autoincrement()) @map("audit_id")
+  tableName             String     @map("table_name") @db.VarChar(100)
+  recordId              String     @map("record_id") @db.VarChar(100)
+  action                AuditAction
+  
+  // Change Details
+  oldValues             Json?      @map("old_values")
+  newValues             Json?      @map("new_values")
+  changedColumns        String[]   @map("changed_columns")
+  
+  // User Context
+  userId                BigInt     @map("user_id")
+  userIp                String?    @map("user_ip") @db.VarChar(45)
+  userAgent             String?    @map("user_agent")
+  sessionId             String?    @map("session_id") @db.VarChar(100)
+  
+  // Timestamp
+  changedAt             DateTime   @default(now()) @map("changed_at")
+  
+  // Data Classification
+  dataClassification    DataClassification @default(INTERNAL) @map("data_classification")
+  
+  // Relationships
+  user                  User       @relation(fields: [userId], references: [id])
+  
+  @@map("audit_log")
+  @@index([tableName, recordId])
+  @@index([userId, changedAt])
+  @@index([action, changedAt])
+}
+
+// =====================================================
+// MISSING RELATION FIXES
+// =====================================================
+
+// Update User model to include missing relations
+model UserSession {
+  id                    BigInt     @id @default(autoincrement())
+  userId                BigInt     @map("user_id")
+  sessionId             String     @unique @map("session_id") @db.VarChar(100)
+  sessionData           Json?      @map("session_data")
+  ipAddress             String?    @map("ip_address") @db.VarChar(45)
+  userAgent             String?    @map("user_agent")
+  expiresAt             DateTime   @map("expires_at")
+  
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  
+  // Relationships
+  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+  @@index([userId])
+  @@index([expiresAt])
+}

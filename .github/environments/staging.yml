@@ -1,0 +1,202 @@
+# TORVAN MEDICAL DEVICE - STAGING ENVIRONMENT CONFIGURATION
+# ========================================================
+# 
+# GitHub Environment configuration for staging deployment
+# Medical device staging environment with proper controls and validation
+
+name: staging
+description: "TORVAN Medical Device Staging Environment"
+
+# Environment protection rules
+protection_rules:
+  required_reviewers: 0  # Staging can auto-deploy
+  wait_timer: 0         # No wait time for staging
+  prevent_self_review: false
+
+# Environment variables for staging
+variables:
+  NODE_ENV: "staging"
+  NEXT_PUBLIC_API_URL: "https://api-staging.torvan.dev"
+  NEXT_PUBLIC_APP_URL: "https://staging.torvan.dev"
+  NEXT_PUBLIC_ENVIRONMENT: "staging"
+  
+  # Database configuration
+  DB_HOST: "staging-db.torvan.dev"
+  DB_PORT: "5432"
+  DB_NAME: "torvan_staging"
+  DB_SSL: "require"
+  
+  # Application configuration
+  APP_NAME: "TORVAN Staging"
+  APP_VERSION: "staging"
+  LOG_LEVEL: "debug"
+  
+  # Feature flags for staging
+  ENABLE_DEBUG_FEATURES: "true"
+  ENABLE_TEST_DATA: "true"
+  ENABLE_PERFORMANCE_MONITORING: "true"
+  
+  # Medical device specific
+  MEDICAL_DEVICE_MODE: "staging"
+  FDA_VALIDATION_MODE: "testing"
+  AUDIT_LEVEL: "detailed"
+  
+  # Integration settings
+  EXTERNAL_API_TIMEOUT: "30000"
+  RATE_LIMIT_REQUESTS: "1000"
+  RATE_LIMIT_WINDOW: "3600"
+
+# Secrets that must be configured in GitHub Secrets
+# These are documented here but must be set in GitHub UI
+required_secrets:
+  # Database connection
+  - STAGING_DATABASE_URL
+  - DB_USER
+  - DB_PASSWORD
+  
+  # Authentication
+  - NEXTAUTH_SECRET
+  - NEXTAUTH_URL
+  
+  # External services
+  - SMTP_HOST
+  - SMTP_USER
+  - SMTP_PASSWORD
+  
+  # Monitoring and logging
+  - DATADOG_API_KEY
+  - SENTRY_DSN
+  
+  # Medical device compliance
+  - FDA_API_KEY
+  - AUDIT_ENCRYPTION_KEY
+  
+  # Third-party integrations
+  - STRIPE_SECRET_KEY
+  - AWS_ACCESS_KEY_ID
+  - AWS_SECRET_ACCESS_KEY
+
+# Deployment configuration
+deployment:
+  provider: "kubernetes"  # or "docker", "serverless", etc.
+  namespace: "torvan-staging"
+  replicas: 2
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m" 
+      memory: "2Gi"
+  
+  # Health check configuration
+  health_check:
+    path: "/api/health"
+    port: 3000
+    initial_delay: 30
+    period: 10
+    timeout: 5
+    failure_threshold: 3
+  
+  # Auto-scaling
+  autoscaling:
+    enabled: true
+    min_replicas: 2
+    max_replicas: 10
+    target_cpu_utilization: 70
+
+# Monitoring and alerting
+monitoring:
+  enabled: true
+  metrics:
+    - response_time
+    - error_rate
+    - throughput
+    - database_connections
+    - memory_usage
+    - cpu_usage
+  
+  alerts:
+    - name: "High Error Rate"
+      condition: "error_rate > 5%"
+      severity: "warning"
+    
+    - name: "High Response Time"
+      condition: "response_time > 3s"
+      severity: "warning"
+    
+    - name: "Database Connection Issues"
+      condition: "db_connections > 80%"
+      severity: "critical"
+
+# Security configuration
+security:
+  # Network security
+  network_policies:
+    - allow_ingress_from: ["public"]
+    - allow_egress_to: ["database", "external-apis"]
+  
+  # Pod security
+  pod_security:
+    run_as_non_root: true
+    read_only_root_filesystem: true
+    security_context:
+      capabilities:
+        drop: ["ALL"]
+  
+  # Secrets management
+  secrets_rotation:
+    enabled: true
+    schedule: "monthly"
+    notify_before_expiry: "7d"
+
+# Medical device specific configuration
+medical_device:
+  # Compliance settings
+  compliance:
+    fda_enabled: true
+    hipaa_enabled: true
+    iso13485_enabled: true
+  
+  # Audit configuration
+  audit:
+    log_all_actions: true
+    encrypt_logs: true
+    retention_period: "7y"  # 7 years for medical device compliance
+    
+  # Risk management
+  risk_management:
+    enabled: true
+    risk_assessment_frequency: "quarterly"
+    
+  # Change control
+  change_control:
+    required_approvals: 1
+    documentation_required: true
+    rollback_plan_required: true
+
+# Data backup and recovery
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "30d"
+  encryption: true
+  
+  # Point-in-time recovery
+  pitr:
+    enabled: true
+    retention: "7d"
+
+# Performance testing configuration
+performance:
+  load_testing:
+    enabled: true
+    schedule: "0 4 * * 0"  # Weekly on Sunday at 4 AM
+    max_users: 100
+    duration: "10m"
+  
+  # Performance thresholds
+  thresholds:
+    response_time_p95: "2s"
+    error_rate: "1%"
+    throughput: "100 rps"
